@@ -16,10 +16,19 @@
 
 package com.github.jarlakxen.drunk
 
-case class ClientOptions(addTypename: Boolean)
+/**
+ * GraphQL client configuration
+ *
+ *  @param addTypename Add's the '__typename' selector to every nested selector, this is useful 
+ *  									 if you use [[com.github.jarlakxen.drunk.circe]]
+ *  									
+ *
+ */
+case class ClientOptions(
+  addTypename: Boolean)
 
 object ClientOptions {
-  
+
   val Default = ClientOptions(true)
-  
+
 }

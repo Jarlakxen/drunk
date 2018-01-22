@@ -29,6 +29,9 @@ package object ast {
     Vector.empty,
     Vector.empty)
 
+  /**
+   * This methods walk through all the document and add's the __typename in every sublevel
+   */
   def addTypename(doc: Document): Document = {
     val newDefinitions = doc.definitions.map {
       case op: OperationDefinition => addTypename(op)

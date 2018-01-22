@@ -25,6 +25,7 @@ import backend.AkkaHttpBackend
 import io.circe._, io.circe.parser._
 import sangria._
 import sangria.ast.Document
+import sangria.parser.{ SyntaxError, QueryParser }
 
 class GraphQLClient private[GraphQLClient] (uri: Uri, options: ClientOptions, backend: AkkaHttpBackend) {
   import GraphQLClient._
@@ -60,21 +61,38 @@ class GraphQLClient private[GraphQLClient] (uri: Uri, options: ClientOptions, ba
     } yield response
   }
 
-  def query[T, Vars](doc: Document, variables: Vars, operationName: Option[String])(
+  def query[T](doc: String)(implicit dec: Decoder[T], ec: ExecutionContext): Future[GraphQLQueryResponse[T]] =
+    query(doc, None, None)(dec, null, ec)
+
+  def query[T](
+    doc: String,
+    operationName: Option[String])(implicit dec: Decoder[T], ec: ExecutionContext): Future[GraphQLQueryResponse[T]] =
+    query(doc, None, operationName)(dec, null, ec)
+
+  def query[T, Vars](doc: String, variables: Vars, operationName: Option[String])(
     implicit
     dec: Decoder[T],
     en: Encoder[Vars],
     ec: ExecutionContext): Future[GraphQLQueryResponse[T]] =
-    query(doc, Some(variables), operationName)
+    for {
+      schema <- Future.fromTry(QueryParser.parse(doc.stripMargin))
+      result <- query(doc, Some(variables), operationName)
+    } yield result
+
+  def query[T](doc: Document)(implicit dec: Decoder[T], ec: ExecutionContext): Future[GraphQLQueryResponse[T]] =
+    query(doc, None, None)(dec, null, ec)
 
   def query[T](
     doc: Document,
     operationName: Option[String])(implicit dec: Decoder[T], ec: ExecutionContext): Future[GraphQLQueryResponse[T]] =
     query(doc, None, operationName)(dec, null, ec)
 
-  def query[T](doc: Document)(implicit dec: Decoder[T], ec: ExecutionContext): Future[GraphQLQueryResponse[T]] =
-    query(doc, None, None)(dec, null, ec)
-
+  def query[T, Vars](doc: Document, variables: Vars, operationName: Option[String])(
+    implicit
+    dec: Decoder[T],
+    en: Encoder[Vars],
+    ec: ExecutionContext): Future[GraphQLQueryResponse[T]] =
+    query(doc, Some(variables), operationName)
 }
 
 object GraphQLClient {

@@ -20,10 +20,13 @@ import io.circe._
 
 object circe {
 
-  implicit class RichString(typename: String) {
+  implicit class RichTypenameField(typename: String) {
     def decodeAs[T](implicit dec: Decoder[T]): (String, Decoder[T]) = (typename, dec)
   }
 
+  /**
+   * This a special [[io.circe.Decoder]] for decode a polymorphic JSON response using the __typename field. 
+   */
   def deriveByTypenameDecoder[T](discriminators: (String, Decoder[_ <: T])*) = new Decoder[T] {
     val discriminatorsMap = discriminators.toMap
     override def apply(c: HCursor) = c.downField(ast.TypenameFieldName).as[String] match {
