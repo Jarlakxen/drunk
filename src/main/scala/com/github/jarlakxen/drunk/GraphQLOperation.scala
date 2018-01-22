@@ -16,6 +16,18 @@
 
 package com.github.jarlakxen.drunk
 
-final case class GraphQLResponseError(errors: List[String], networkStatus: Int)
+import io.circe._
+import sangria.ast.Document
 
-final case class GraphQLResponseData[T](data: T)
+case class GraphQLOperation[Res, Vars](
+  doc: Document,
+  variables: Option[Vars],
+  name: Option[String])(implicit val variablesEncoder: Encoder[Vars]) {
+
+  def jsonDoc: Json =
+    Json.fromString(doc.toString())
+
+  def encodeVariables: Option[Json] =
+    variables.map(variablesEncoder(_))
+
+}

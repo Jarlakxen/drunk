@@ -110,7 +110,7 @@ class GraphQLClientSpec extends Spec with TestHttpServer {
       """
       
     val expected = HeroQuery(Droid("2001", Some("R2-D2"), List("Luke Skywalker", "Han Solo", "Leia Organa"), List(Episode.NEWHOPE, Episode.EMPIRE, Episode.JEDI), None))
-    client.query[HeroQuery](doc).futureValue shouldBe Right(GraphQLQueryResult(expected))
+    client.query[HeroQuery](doc).result.futureValue shouldBe Right(GraphQLResponseData(expected))
   }
 
   it should "fail to execute query" in {
@@ -125,7 +125,7 @@ class GraphQLClientSpec extends Spec with TestHttpServer {
         }
       """
 
-    client.query[Human](doc).futureValue shouldBe Left(GraphQLQueryError(List("Cannot query field 'test'"), 200))
+    client.query[Human](doc).result.futureValue shouldBe Left(GraphQLResponseError(List("Cannot query field 'test'"), 200))
   }
 
 }
