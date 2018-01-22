@@ -10,7 +10,7 @@ Add the following dependency:
 ```scala
   resolvers += Resolver.bintrayRepo("jarlakxen", "maven")
 
-  "com.github.jarlakxen" %% "drunk" % "1.0.0"
+  "com.github.jarlakxen" %% "drunk" % "2.1.0"
 ```
 
 Then, import:
@@ -23,7 +23,7 @@ Then, import:
   
   val client = GraphQLClient(s"http://$host:$port/api/graphql")
 
-  val doc =
+  val query =
     graphql"""
       query HeroAndFriends {
         hero {
@@ -37,7 +37,47 @@ Then, import:
       }
     """
       
-    client.query[HeroQuery](doc)
+    client.query[HeroQuery](query)
+```
+
+### Mutations
+
+
+```scala
+  import com.github.jarlakxen.drunk._
+  import io.circe._, io.circe.generic.semiauto._
+  import sangria.macros._
+
+  case class User(id: String, name: String)
+  
+  val client = GraphQLClient(s"http://$host:$port/api/graphql")
+
+  val mutation =
+    graphql"""
+      mutation($user1: String!, $user2: String!) {
+        user1: newUser(name: $user1) {
+          id
+          name
+        }
+        user2: newUser(name: $user2) {
+          id
+          name
+        }
+      }
+    """
+    val result: Future[GraphQLResponse[Map[String, User]]] = 
+      client.query(mutation, Map("user1" -> "123", "user2" -> "456"))
+```
+
+### Schema Introspection
+
+```scala
+  import com.github.jarlakxen.drunk._
+  import sangria.introspection.IntrospectionSchema
+
+  val client = GraphQLClient(s"http://$host:$port/api/graphql")
+      
+  val result: Future[GraphQLResponse[IntrospectionSchema]] = client.schema
 ```
 
 ## Typename Derive
@@ -75,11 +115,6 @@ Then, import:
     "Droid".decodeAs[Droid] // for __typename: 'Droid' is going to use droidDecoder
   )
 ```
-
-## Roadmap
-
-- [x] Support Querys
-- [ ] Support Mutations
 
 ## Contributing
 

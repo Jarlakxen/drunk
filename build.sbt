@@ -40,6 +40,7 @@ resolvers ++= Seq(Resolver.sonatypeRepo("releases"), Resolver.sonatypeRepo("snap
 
 // ··· Project Dependencies ···
 val sangriaV        = "1.3.3"
+val sangriaCirceV   = "1.2.0"
 val akkaHttpV       = "10.0.11"
 val akkaHttpCircleV = "1.19.0"
 val circeV          = "0.9.1"
@@ -50,6 +51,7 @@ val scalatestV      = "3.0.4"
 libraryDependencies ++= Seq(
   // --- GraphQL --
   "org.sangria-graphql" %% "sangria"          % sangriaV,
+  "org.sangria-graphql" %% "sangria-circe"    % sangriaCirceV,
   // --- Akka --
   "com.typesafe.akka"   %% "akka-http"        % akkaHttpV,
   "de.heikoseeberger"   %% "akka-http-circe"  % akkaHttpCircleV,

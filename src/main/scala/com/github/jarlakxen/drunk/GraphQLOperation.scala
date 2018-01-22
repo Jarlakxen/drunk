@@ -18,14 +18,15 @@ package com.github.jarlakxen.drunk
 
 import io.circe._
 import sangria.ast.Document
+import sangria.renderer.QueryRenderer
 
 case class GraphQLOperation[Res, Vars](
   doc: Document,
   variables: Option[Vars],
   name: Option[String])(implicit val variablesEncoder: Encoder[Vars]) {
 
-  def jsonDoc: Json =
-    Json.fromString(doc.toString())
+  def docToJson: Json =
+    Json.fromString(QueryRenderer.render(doc, QueryRenderer.Compact))
 
   def encodeVariables: Option[Json] =
     variables.map(variablesEncoder(_))
