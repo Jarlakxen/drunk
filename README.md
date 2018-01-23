@@ -10,10 +10,11 @@ Add the following dependency:
 ```scala
   resolvers += Resolver.bintrayRepo("jarlakxen", "maven")
 
-  "com.github.jarlakxen" %% "drunk" % "2.1.0"
+  "com.github.jarlakxen" %% "drunk" % "2.2.0"
 ```
 
 Then, import:
+
 
 ```scala
   import com.github.jarlakxen.drunk._
@@ -37,11 +38,39 @@ Then, import:
       }
     """
       
-    client.query[HeroQuery](query)
+  val cursor: GraphQLCursor = client.query[HeroQuery](query)
+  val data: Future[GraphQLResponse[HeroQuery]] = cursor.result
+```
+
+#### Working with the `GraphQLCursor`
+
+```scala
+
+  type HerosQuery = Map[String, List[Hero]]
+  
+  case class Pagination(offset: Int, size: Int)
+
+  val query =
+    graphql"""
+      query Heros($offset: Int, $size: Int) {
+        heros(offset: $offset, size: $size) {
+          id
+          name
+          friends {
+            name
+          }
+          appearsIn
+        }
+      }
+    """
+      
+  val page1: GraphQLCursor[HerosQuery, Pagination] = 
+    client.query(query, Pagination(0, 10))
+  val page2: GraphQLCursor[HerosQuery, Pagination] = 
+    page1.fetchMore(lastPage => lastPage.copy(offset = lastPage.offset + lastPage.size ) )
 ```
 
 ### Mutations
-
 
 ```scala
   import com.github.jarlakxen.drunk._
@@ -82,6 +111,8 @@ Then, import:
 
 ## Typename Derive
 
+It's very common in GraphQL to have response with polymorphic objects in the responses. One way to discriminate the type of object is to check the `__typename` field. For that purpose there an special derive decoder in `com.github.jarlakxen.drunk.circe._`:
+
 ```scala
   import com.github.jarlakxen.drunk.circe._
   import io.circe._, io.circe.generic.semiauto._
@@ -114,6 +145,37 @@ Then, import:
     "Human".decodeAs[Human], // for __typename: 'Human' is going to use humanDecoder
     "Droid".decodeAs[Droid] // for __typename: 'Droid' is going to use droidDecoder
   )
+```
+
+This code can be use to parse a response like:
+
+
+```json
+{
+  "__typename": "Droid"
+  "name": "R2D2"
+  ....
+}
+```
+
+> Take into account the client automatically adds the '__typename' field to every selector, so it's not required to be added in the queries.
+
+
+## Extensions
+
+There are several extension for GraphQL, this client supports:
+
+* [Apollo cache control](https://github.com/apollographql/apollo-cache-control)
+* [sangria-slowlog](http://sangria-graphql.org/learn/#profiling-graphql-query-execution)
+
+
+To get the information of the extensions you can:
+
+```scala     
+  val cursor: GraphQLCursor = client.query[HeroQuery](query)
+  val extensions: Future[GraphQLExtensions] = cursor.extensions
+  val metrics: Future[Option[GraphQLMetricsExtension]] = extensions.map(_.metrics)
+  val cacheControl: Future[Option[GraphQLCacheControlExtension]] = extensions.map(_.cacheControl)
 ```
 
 ## Contributing

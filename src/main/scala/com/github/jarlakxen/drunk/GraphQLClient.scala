@@ -23,6 +23,7 @@ import akka.actor.ActorSystem
 import akka.http.scaladsl.model.Uri
 
 import backend.AkkaHttpBackend
+import extensions.{ GraphQLExtensions, NoExtensions }
 import io.circe._, io.circe.parser._
 import sangria._
 import sangria.ast.Document
@@ -35,15 +36,13 @@ class GraphQLClient private[GraphQLClient] (uri: Uri, options: ClientOptions, ba
 
   private[drunk] def execute[Res, Vars](doc: Document, variables: Option[Vars], name: Option[String])(
     implicit
-    responseDecoder: Decoder[Res],
     variablesEncoder: Encoder[Vars],
-    ec: ExecutionContext): Future[GraphQLResponse[Res]] =
+    ec: ExecutionContext): Future[(Int, Json)] =
     execute(GraphQLOperation(doc, variables, name))
 
   private[drunk] def execute[Res, Vars](op: GraphQLOperation[Res, Vars])(
     implicit
-    dec: Decoder[Res],
-    ec: ExecutionContext): Future[GraphQLResponse[Res]] = {
+    ec: ExecutionContext): Future[(Int, Json)] = {
 
     val fields =
       List("query" -> op.docToJson) ++
@@ -55,17 +54,7 @@ class GraphQLClient private[GraphQLClient] (uri: Uri, options: ClientOptions, ba
     for {
       (statusCode, rawBody) <- backend.send(uri, body)
       jsonBody <- Future.fromTry(parse(rawBody).toTry)
-      response <- {
-        val errors: Option[Future[GraphQLResponse[Res]]] =
-          readErrors(jsonBody).map(msgs => Future.successful(Left(GraphQLResponseError(msgs.toList, statusCode))))
-
-        val data: Future[GraphQLResponse[Res]] =
-          Future.fromTry(jsonBody.hcursor.downField("data").as[Res].toTry)
-            .map(data => Right(GraphQLResponseData(data)))
-
-        errors getOrElse data
-      }
-    } yield response
+    } yield (statusCode, jsonBody)
   }
 
   def query[Res](doc: String)(implicit dec: Decoder[Res], ec: ExecutionContext): Try[GraphQLCursor[Res, Nothing]] =
@@ -117,7 +106,9 @@ class GraphQLClient private[GraphQLClient] (uri: Uri, options: ClientOptions, ba
 
     val operation: GraphQLOperation[Res, Vars] = GraphQLOperation(doc, variables, operationName)
     val result = execute(operation)
-    new GraphQLCursor(this, result, operation)
+    val data: Future[GraphQLClient.GraphQLResponse[Res]] = result.flatMap { case (status, body) => Future.fromTry(extractErrorOrData(body, status)) }
+    val extensions = result.map { case (_, body) => extractExtensions(body) }
+    new GraphQLCursor(this, data, extensions, operation)
   }
 
   def mutate[Res, Vars](doc: Document, variables: Vars)(
@@ -131,18 +122,17 @@ class GraphQLClient private[GraphQLClient] (uri: Uri, options: ClientOptions, ba
     implicit
     dec: Decoder[Res],
     en: Encoder[Vars],
-    ec: ExecutionContext): Future[GraphQLResponse[Res]] =
-    execute(doc, Some(variables), operationName)
+    ec: ExecutionContext): Future[GraphQLResponse[Res]] = {
 
-  def schema(implicit ec: ExecutionContext): Future[GraphQLResponse[IntrospectionSchema]] =
-    execute[Json, Nothing](introspectionQuery, None, None)(implicitly[Decoder[Json]], null, ec).flatMap {
-      case Right(GraphQLResponseData(json)) =>
-        Future.fromTry(IntrospectionParser.parse(Json.obj("data" -> json))).map { schema =>
-          Right(GraphQLResponseData(schema))
-        }
-      case Left(responseError) =>
-        Future.successful(Left(responseError))
-    }
+    val result = execute(doc, Some(variables), operationName)
+    result.flatMap { case (status, body) => Future.fromTry(extractErrorOrData(body, status)) }
+  }
+
+  def schema(implicit ec: ExecutionContext): Future[IntrospectionSchema] =
+    execute[Json, Nothing](introspectionQuery, None, None)(null, ec)
+      .flatMap {
+        case (_, json) => Future.fromTry(IntrospectionParser.parse(json))
+      }
 
 }
 
@@ -159,13 +149,36 @@ object GraphQLClient {
   def apply(actorSystem: ActorSystem, uri: String, connectionOptions: ConnectionOptions, clientOptions: ClientOptions): GraphQLClient =
     new GraphQLClient(Uri(uri), clientOptions, AkkaHttpBackend.usingActorSystem(actorSystem, connectionOptions))
 
-  private[GraphQLClient] def readErrors(body: Json): Option[Seq[String]] = {
+  private[GraphQLClient] def extractErrors(body: Json, statusCode: Int): Option[GraphQLResponseError] = {
     val cursor: HCursor = body.hcursor
 
     for {
       errorsNode <- cursor.downField("errors").focus
       errors <- errorsNode.asArray
-    } yield errors.map(_.hcursor.downField("message").as[String].toOption).flatten
+    } yield {
+      val msgs = errors.map(_.hcursor.downField("message").as[String].toOption).flatten.toList
+      GraphQLResponseError(msgs, statusCode)
+    }
   }
+
+  private[GraphQLClient] def extractData[Res](jsonBody: Json)(implicit dec: Decoder[Res]): Try[GraphQLResponseData[Res]] =
+    jsonBody.hcursor.downField("data").as[Res].toTry.map(GraphQLResponseData(_))
+
+  private[GraphQLClient] def extractErrorOrData[Res](jsonBody: Json, statusCode: Int)(implicit dec: Decoder[Res]): Try[GraphQLResponse[Res]] = {
+    val errors: Option[Try[GraphQLResponse[Res]]] =
+      extractErrors(jsonBody, statusCode).map(errors => Success(Left(errors)))
+    val data: Try[GraphQLResponse[Res]] =
+      extractData(jsonBody).map(Right(_))
+
+    errors.getOrElse(data)
+  }
+
+  private[GraphQLClient] def extractExtensions(jsonBody: Json): GraphQLExtensions =
+    jsonBody
+      .hcursor
+      .downField("extensions")
+      .as[GraphQLExtensions]
+      .toOption
+      .getOrElse(NoExtensions)
 
 }

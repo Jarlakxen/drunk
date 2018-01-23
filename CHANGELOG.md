@@ -1,5 +1,11 @@
 # Changelog
 
+## 22/01/2018 - Version 2.2.0
+
+Release changes:
+
+* Parse extensions
+
 ## 22/01/2018 - Version 2.1.0
 
 Release changes:

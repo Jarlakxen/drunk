@@ -18,12 +18,14 @@ package com.github.jarlakxen.drunk
 
 import scala.concurrent.{ ExecutionContext, Future }
 
+import com.github.jarlakxen.drunk.extensions._
 import io.circe._
 import sangria._
 
 class GraphQLCursor[Res, Vars](
   client: GraphQLClient,
   val result: Future[GraphQLClient.GraphQLResponse[Res]],
+  val extensions: Future[GraphQLExtensions],
   val lastOperation: GraphQLOperation[Res, Vars])(implicit responseDecoder: Decoder[Res], ec: ExecutionContext) {
 
   def refetch: GraphQLCursor[Res, Vars] =
@@ -37,8 +39,6 @@ class GraphQLCursor[Res, Vars](
 
   private def refetch(variables: Option[Vars]): GraphQLCursor[Res, Vars] = {
     implicit val variablesEncoder = lastOperation.variablesEncoder
-    val newOperation: GraphQLOperation[Res, Vars] = lastOperation.copy(variables = variables)
-    val result = client.execute(newOperation)(responseDecoder, ec)
-    new GraphQLCursor(client, result, newOperation)
+    client.query(lastOperation.doc, variables, lastOperation.name)
   }
 }
