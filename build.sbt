@@ -10,7 +10,7 @@ name := projectName
 
 organization := "com.github.jarlakxen"
 
-crossScalaVersions := Seq("2.12.4")
+crossScalaVersions := Seq("2.12.5")
 
 scalaVersion := crossScalaVersions.value.head
 
@@ -39,14 +39,14 @@ scalacOptions ++= Seq(
 resolvers ++= Seq(Resolver.sonatypeRepo("releases"), Resolver.sonatypeRepo("snapshots"))
 
 // ··· Project Dependencies ···
-val sangriaV        = "1.3.3"
-val sangriaCirceV   = "1.2.0"
-val akkaHttpV       = "10.0.11"
-val akkaHttpCircleV = "1.19.0"
-val circeV          = "0.9.1"
+val sangriaV        = "1.4.0"
+val sangriaCirceV   = "1.2.1"
+val akkaHttpV       = "10.1.1"
+val akkaHttpCircleV = "1.20.0"
+val circeV          = "0.9.3"
 val slf4JV          = "1.7.25"
 val logbackV        = "1.2.3"
-val scalatestV      = "3.0.4"
+val scalatestV      = "3.0.5"
 
 libraryDependencies ++= Seq(
   // --- GraphQL --
