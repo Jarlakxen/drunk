@@ -18,6 +18,7 @@ package com.github.jarlakxen.drunk.backend
 
 import java.io.{ File, IOException, UnsupportedEncodingException }
 
+import scala.collection.immutable
 import scala.concurrent.{ ExecutionContext, Future }
 import scala.util.{ Failure, Success, Try }
 
@@ -25,7 +26,7 @@ import akka.actor.ActorSystem
 import akka.event.LoggingAdapter
 import akka.http.scaladsl.{ ClientTransport, Http, HttpsConnectionContext }
 import akka.http.scaladsl.coding.{ Deflate, Gzip, NoCoding }
-import akka.http.scaladsl.model.{ ContentTypes, HttpEntity, HttpMethods, HttpRequest, HttpResponse, Uri }
+import akka.http.scaladsl.model.{ ContentTypes, HttpEntity, HttpHeader, HttpMethods, HttpRequest, HttpResponse, Uri }
 import akka.http.scaladsl.model.headers.HttpEncodings
 import akka.http.scaladsl.settings.ClientConnectionSettings
 import akka.http.scaladsl.settings.ConnectionPoolSettings
@@ -41,7 +42,8 @@ class AkkaHttpBackend private[AkkaHttpBackend] (
   opts: ConnectionOptions,
   customHttpsContext: Option[HttpsConnectionContext],
   customConnectionPoolSettings: Option[ConnectionPoolSettings],
-  customLog: Option[LoggingAdapter]) {
+  customLog: Option[LoggingAdapter],
+  headers: immutable.Seq[HttpHeader]) {
 
   private implicit val as: ActorSystem = actorSystem
   private implicit val materializer: ActorMaterializer = ActorMaterializer()
@@ -64,7 +66,7 @@ class AkkaHttpBackend private[AkkaHttpBackend] (
   def send(uri: Uri, body: String): Future[(Int, String)] = {
     implicit val ec: ExecutionContext = as.dispatcher
 
-    val req = HttpRequest(HttpMethods.POST, uri, Nil, HttpEntity(ContentTypes.`application/json`, body))
+    val req = HttpRequest(HttpMethods.POST, uri, headers, HttpEntity(ContentTypes.`application/json`, body))
 
     val res = http.singleRequest(
       req,
@@ -124,14 +126,16 @@ object AkkaHttpBackend {
     options: ConnectionOptions = ConnectionOptions.Default,
     customHttpsContext: Option[HttpsConnectionContext] = None,
     customConnectionPoolSettings: Option[ConnectionPoolSettings] = None,
-    customLog: Option[LoggingAdapter] = None): AkkaHttpBackend =
+    customLog: Option[LoggingAdapter] = None,
+    headers: immutable.Seq[HttpHeader] = Nil): AkkaHttpBackend =
     new AkkaHttpBackend(
       ActorSystem("sttp"),
       terminateActorSystemOnClose = true,
       options,
       customHttpsContext,
       customConnectionPoolSettings,
-      customLog)
+      customLog,
+      headers)
 
   /**
    * @param actorSystem The actor system which will be used for the http-client
@@ -145,12 +149,14 @@ object AkkaHttpBackend {
     options: ConnectionOptions = ConnectionOptions.Default,
     customHttpsContext: Option[HttpsConnectionContext] = None,
     customConnectionPoolSettings: Option[ConnectionPoolSettings] = None,
-    customLog: Option[LoggingAdapter] = None): AkkaHttpBackend =
+    customLog: Option[LoggingAdapter] = None,
+    headers: immutable.Seq[HttpHeader] = Nil): AkkaHttpBackend =
     new AkkaHttpBackend(
       actorSystem,
       terminateActorSystemOnClose = false,
       options,
       customHttpsContext,
       customConnectionPoolSettings,
-      customLog)
+      customLog,
+      headers)
 }
