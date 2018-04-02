@@ -1,5 +1,12 @@
 # Changelog
 
+## 02/04/2018 - Version 2.3.0
+
+Release changes:
+
+* Bump dependancies
+* #1 Add support for Http connection headers. Thanks to @NicolasRouquette!
+
 ## 22/01/2018 - Version 2.2.0
 
 Release changes:
