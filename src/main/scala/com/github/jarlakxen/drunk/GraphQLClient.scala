@@ -16,22 +16,21 @@
 
 package com.github.jarlakxen.drunk
 
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util._
-
 import akka.actor.ActorSystem
 import akka.http.scaladsl.model.Uri
-
-import backend.AkkaHttpBackend
-import extensions.{ GraphQLExtensions, NoExtensions }
-import io.circe._, io.circe.parser._
+import backend.{AkkaHttpBackend, GraphQLBackend}
+import extensions.{GraphQLExtensions, NoExtensions}
+import io.circe._
+import io.circe.parser._
 import sangria._
 import sangria.ast.Document
 import sangria.introspection._
 import sangria.marshalling.circe._
 import sangria.parser.{ SyntaxError, QueryParser }
 
-class GraphQLClient private[GraphQLClient] (uri: Uri, options: ClientOptions, backend: AkkaHttpBackend) {
+class GraphQLClient private[GraphQLClient] (uri: Uri, options: ClientOptions, backend: GraphQLBackend) {
   import GraphQLClient._
 
   private[drunk] def execute[Res, Vars](doc: Document, variables: Option[Vars], name: Option[String])(
@@ -140,7 +139,7 @@ object GraphQLClient {
 
   type GraphQLResponse[Res] = Either[GraphQLResponseError, GraphQLResponseData[Res]]
 
-  def apply(uri: String, backend: AkkaHttpBackend, clientOptions: ClientOptions): GraphQLClient =
+  def apply(uri: String, backend: GraphQLBackend, clientOptions: ClientOptions): GraphQLClient =
     new GraphQLClient(Uri(uri), clientOptions, backend)
 
   def apply(uri: String, options: ConnectionOptions = ConnectionOptions.Default, clientOptions: ClientOptions = ClientOptions.Default): GraphQLClient =
