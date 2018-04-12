@@ -81,6 +81,8 @@ class AkkaHttpBackend private[AkkaHttpBackend] (
       val decodedResponse = decodeResponse(hr)
       val stringBody = bodyToString(decodedResponse, charsetFromHeaders)
 
+      hr.discardEntityBytes()
+      
       if (code >= 200 && code < 300) {
         stringBody.map((code, _))
       } else {
