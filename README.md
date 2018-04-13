@@ -32,8 +32,8 @@ There are three ways to create a `GraphQLClient`:
  val uri: Uri = Uri(s"https://$host:$port/api/graphql")
 
  val http: HttpExt = Http()
- val flow: Flow[HttpRequest, HttpResponse, Future[OutgoingConnection]] = http.outgoingConnectionHttps(uri.authority.host.address(), uri.authority.port)
- val client = GraphQLClient(uri, flow, clientOptions = ClientOptions.Default, headers = NIl)
+ val flow: Flow[HttpRequest, HttpResponse, Future[OutgoingConnection]] = http.outgoingConnectionHttps(uri.authority.host.address(), uri.effectivePort)
+ val client = GraphQLClient(uri, flow, clientOptions = ClientOptions.Default, headers = Nil)
 
 ```
 
@@ -45,8 +45,8 @@ There are three ways to create a `GraphQLClient`:
  val uri: Uri = Uri(s"http://$host:$port/api/graphql")
 
  val http: HttpExt = Http()
- val flow: Flow[HttpRequest, HttpResponse, Future[OutgoingConnection]] = http.outgoingConnection(uri.authority.host.address(), uri.authority.port)
- val client = GraphQLClient(uri, flow, clientOptions = ClientOptions.Default, headers = NIl)
+ val flow: Flow[HttpRequest, HttpResponse, Future[OutgoingConnection]] = http.outgoingConnection(uri.authority.host.address(), uri.effectivePort)
+ val client = GraphQLClient(uri, flow, clientOptions = ClientOptions.Default, headers = Nil)
 
 ```
 
