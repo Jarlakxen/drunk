@@ -20,10 +20,45 @@ Then, import:
   import com.github.jarlakxen.drunk._
   import io.circe._, io.circe.generic.semiauto._
   import sangria.macros._
+```
 
-  
+There are three ways to create a `GraphQLClient`:
+
+1) As Akka Https flow connection
+
+```
+ import akka.http.scaladsl.model.Uri
+ 
+ val uri: Uri = Uri(s"https://$host:$port/api/graphql")
+
+ val http: HttpExt = Http()
+ val flow: Flow[HttpRequest, HttpResponse, Future[OutgoingConnection]] = http.outgoingConnectionHttps(uri.authority.host.address(), uri.effectivePort)
+ val client = GraphQLClient(uri, flow, clientOptions = ClientOptions.Default, headers = Nil)
+
+```
+
+2) As Akka Http flow connection
+
+```
+ import akka.http.scaladsl.model.Uri
+ 
+ val uri: Uri = Uri(s"http://$host:$port/api/graphql")
+
+ val http: HttpExt = Http()
+ val flow: Flow[HttpRequest, HttpResponse, Future[OutgoingConnection]] = http.outgoingConnection(uri.authority.host.address(), uri.effectivePort)
+ val client = GraphQLClient(uri, flow, clientOptions = ClientOptions.Default, headers = Nil)
+
+```
+
+3) As Akka Http single request
+
+```  
   val client = GraphQLClient(s"http://$host:$port/api/graphql")
+```
 
+Then, query:
+
+```
   val query =
     graphql"""
       query HeroAndFriends {

@@ -16,63 +16,26 @@
 
 package com.github.jarlakxen.drunk.backend
 
-import java.io.{ File, IOException, UnsupportedEncodingException }
-
 import scala.collection.immutable
-import scala.concurrent.{ ExecutionContext, Future }
-import scala.util.{ Failure, Success, Try }
-
+import scala.concurrent.{ExecutionContext, Future}
 import akka.actor.ActorSystem
-import akka.event.LoggingAdapter
-import akka.http.scaladsl.{ ClientTransport, Http, HttpsConnectionContext }
-import akka.http.scaladsl.coding.{ Deflate, Gzip, NoCoding }
-import akka.http.scaladsl.model.{ ContentTypes, HttpEntity, HttpHeader, HttpMethods, HttpRequest, HttpResponse, Uri }
-import akka.http.scaladsl.model.headers.HttpEncodings
-import akka.http.scaladsl.settings.ClientConnectionSettings
-import akka.http.scaladsl.settings.ConnectionPoolSettings
+import akka.http.scaladsl.{Http, HttpExt}
+import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpHeader, HttpMethods, HttpRequest, Uri}
 import akka.stream.ActorMaterializer
-import akka.stream.scaladsl.Source
-import akka.util.ByteString
-
-import com.github.jarlakxen.drunk._
 
 class AkkaHttpBackend private[AkkaHttpBackend] (
-  actorSystem: ActorSystem,
-  terminateActorSystemOnClose: Boolean,
-  opts: ConnectionOptions,
-  customHttpsContext: Option[HttpsConnectionContext],
-  customConnectionPoolSettings: Option[ConnectionPoolSettings],
-  customLog: Option[LoggingAdapter],
-  headers: immutable.Seq[HttpHeader]) {
+  uri: Uri,
+  headers: immutable.Seq[HttpHeader],
+  httpExt: HttpExt
+)(override implicit val as: ActorSystem, override implicit val mat: ActorMaterializer)
+    extends AkkaBackend {
 
-  private implicit val as: ActorSystem = actorSystem
-  private implicit val materializer: ActorMaterializer = ActorMaterializer()
-
-  private val http = Http()
-
-  private val connectionSettings =
-    ClientConnectionSettings(actorSystem)
-      .withConnectingTimeout(opts.connectionTimeout)
-
-  private val connectionPoolSettings = {
-    val base = customConnectionPoolSettings.getOrElse(ConnectionPoolSettings(actorSystem))
-    opts.proxy match {
-      case None => base
-      case Some(p) =>
-        base.withTransport(ClientTransport.httpsProxy(p.inetSocketAddress))
-    }
-  }
-
-  def send(uri: Uri, body: String): Future[(Int, String)] = {
+  def send(body: String): Future[(Int, String)] = {
     implicit val ec: ExecutionContext = as.dispatcher
 
     val req = HttpRequest(HttpMethods.POST, uri, headers, HttpEntity(ContentTypes.`application/json`, body))
 
-    val res = http.singleRequest(
-      req,
-      settings = connectionPoolSettings,
-      connectionContext = customHttpsContext.getOrElse(http.defaultClientHttpsContext),
-      log = customLog.getOrElse(actorSystem.log))
+    val res = httpExt.singleRequest(req)
 
     res.flatMap { hr =>
       val code = hr.status.intValue()
@@ -82,40 +45,18 @@ class AkkaHttpBackend private[AkkaHttpBackend] (
       val stringBody = bodyToString(decodedResponse, charsetFromHeaders)
 
       if (code >= 200 && code < 300) {
-        stringBody.map((code, _))
+        stringBody.map { body =>
+          hr.discardEntityBytes()
+          (code, body)
+        }
       } else {
-        stringBody.flatMap { body => Future.failed(new RuntimeException(s"${uri.toString} return $code with body: $body")) }
+        stringBody.flatMap { body =>
+          hr.discardEntityBytes()
+          Future.failed(new RuntimeException(s"${uri.toString} return $code with body: $body"))
+        }
       }
     }
   }
-
-  private def encodingFromContentType(ct: String): Option[String] =
-    ct.split(";").map(_.trim.toLowerCase).collectFirst {
-      case s if s.startsWith("charset=") => s.substring(8)
-    }
-
-  private def decodeResponse(response: HttpResponse): HttpResponse = {
-    val decoder = response.encoding match {
-      case HttpEncodings.gzip => Gzip
-      case HttpEncodings.deflate => Deflate
-      case HttpEncodings.identity => NoCoding
-      case ce =>
-        throw new UnsupportedEncodingException(s"Unsupported encoding: $ce")
-    }
-
-    decoder.decodeMessage(response)
-  }
-
-  private def bodyToString(hr: HttpResponse, charsetFromHeaders: String): Future[String] = {
-    implicit val ec: ExecutionContext = as.dispatcher
-
-    hr.entity.dataBytes
-      .runFold(ByteString.empty)(_ ++ _)
-      .map(_.decodeString(charsetFromHeaders))
-  }
-
-  def close(): Unit =
-    if (terminateActorSystemOnClose) actorSystem.terminate()
 
 }
 
@@ -123,40 +64,12 @@ object AkkaHttpBackend {
   val ContentTypeHeader = "Content-Type"
 
   def apply(
-    options: ConnectionOptions = ConnectionOptions.Default,
-    customHttpsContext: Option[HttpsConnectionContext] = None,
-    customConnectionPoolSettings: Option[ConnectionPoolSettings] = None,
-    customLog: Option[LoggingAdapter] = None,
-    headers: immutable.Seq[HttpHeader] = Nil): AkkaHttpBackend =
-    new AkkaHttpBackend(
-      ActorSystem("sttp"),
-      terminateActorSystemOnClose = true,
-      options,
-      customHttpsContext,
-      customConnectionPoolSettings,
-      customLog,
-      headers)
+    uri: Uri,
+    headers: immutable.Seq[HttpHeader] = Nil,
+    httpExt: Option[HttpExt] = None
+  )(implicit as: ActorSystem, mat: ActorMaterializer): AkkaHttpBackend = {
 
-  /**
-   * @param actorSystem The actor system which will be used for the http-client
-   *                    actors.
-   * @param ec The execution context for running non-network related operations,
-   *           e.g. mapping responses. Defaults to the global execution
-   *           context.
-   */
-  def usingActorSystem(
-    actorSystem: ActorSystem,
-    options: ConnectionOptions = ConnectionOptions.Default,
-    customHttpsContext: Option[HttpsConnectionContext] = None,
-    customConnectionPoolSettings: Option[ConnectionPoolSettings] = None,
-    customLog: Option[LoggingAdapter] = None,
-    headers: immutable.Seq[HttpHeader] = Nil): AkkaHttpBackend =
-    new AkkaHttpBackend(
-      actorSystem,
-      terminateActorSystemOnClose = false,
-      options,
-      customHttpsContext,
-      customConnectionPoolSettings,
-      customLog,
-      headers)
+    val http = httpExt.getOrElse { Http(as) }
+    new AkkaHttpBackend(uri, headers, http)
+  }
 }
