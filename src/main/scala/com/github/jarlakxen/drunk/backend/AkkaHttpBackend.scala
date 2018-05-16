@@ -36,9 +36,6 @@ import com.github.jarlakxen.drunk._
 
 import scala.concurrent.{ExecutionContext, Future}
 
-trait GraphQLBackend {
-  def send(uri: Uri, body: String, options: ClientOptions): Future[(Int, String)]
-}
 
 class AkkaHttpBackend private[AkkaHttpBackend] (
   actorSystem: ActorSystem,
@@ -47,7 +44,7 @@ class AkkaHttpBackend private[AkkaHttpBackend] (
   customHttpsContext: Option[HttpsConnectionContext],
   customConnectionPoolSettings: Option[ConnectionPoolSettings],
   customLog: Option[LoggingAdapter],
-  headers: immutable.Seq[HttpHeader]) {
+  headers: immutable.Seq[HttpHeader]) extends GraphQLBackend {
 
   private implicit val as: ActorSystem = actorSystem
   private implicit val materializer: ActorMaterializer = ActorMaterializer()
