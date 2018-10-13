@@ -10,7 +10,7 @@ name := projectName
 
 organization := "com.github.jarlakxen"
 
-crossScalaVersions := Seq("2.12.5")
+crossScalaVersions := Seq("2.12.7", "2.11.12")
 
 scalaVersion := crossScalaVersions.value.head
 
