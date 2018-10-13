@@ -10,7 +10,7 @@ Add the following dependency:
 ```scala
   resolvers += Resolver.bintrayRepo("jarlakxen", "maven")
 
-  "com.github.jarlakxen" %% "drunk" % "2.4.0"
+  "com.github.jarlakxen" %% "drunk" % "2.5.0"
 ```
 
 Then, import:

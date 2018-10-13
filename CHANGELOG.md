@@ -1,5 +1,12 @@
 # Changelog
 
+## 13/10/2018 - Version 2.5.0
+
+Release changes:
+
+* Bump dependencies
+* Cross build
+
 ## 17/04/2018 - Version 2.4.0
 
 Release changes:
@@ -10,7 +17,7 @@ Release changes:
 
 Release changes:
 
-* Bump dependancies
+* Bump dependencies
 * #1 Add support for Http connection headers. Thanks to @NicolasRouquette!
 
 ## 22/01/2018 - Version 2.2.0
