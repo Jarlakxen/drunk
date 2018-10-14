@@ -154,6 +154,20 @@ class GraphQLClient private[GraphQLClient] (options: ClientOptions, backend: Akk
 
 object GraphQLClient {
 
+  // Work arround for Scala 2.11
+  implicit class Either212[+A, +B](either: Either[A, B]) {
+
+    def toTry(implicit ev: A <:< Throwable): Try[B] = either match {
+      case Right(b) => Success(b)
+      case Left(a) => Failure(a)
+    }
+
+    def toOption: Option[B] = either match {
+      case Right(b) => Some(b)
+      case _        => None
+    }
+  }
+
   type GraphQLResponse[Res] = Either[GraphQLResponseError, GraphQLResponseData[Res]]
 
   def apply(backend: AkkaBackend, clientOptions: ClientOptions): GraphQLClient =
@@ -186,7 +200,7 @@ object GraphQLClient {
       errorsNode <- cursor.downField("errors").focus
       errors <- errorsNode.asArray
     } yield {
-      val msgs = errors.map(_.hcursor.downField("message").as[String].toOption).flatten.toList
+      val msgs = errors.flatMap(_.hcursor.downField("message").as[String].toOption).toList
       GraphQLResponseError(msgs, statusCode)
     }
   }
