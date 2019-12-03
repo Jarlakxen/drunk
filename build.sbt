@@ -10,7 +10,7 @@ name := projectName
 
 organization := "com.github.jarlakxen"
 
-crossScalaVersions := Seq("2.12.7", "2.11.12")
+crossScalaVersions := Seq("2.13.1", "2.12.9")
 
 scalaVersion := crossScalaVersions.value.head
 
@@ -41,14 +41,14 @@ scalacOptions ++= Seq(
 resolvers ++= Seq(Resolver.sonatypeRepo("releases"), Resolver.sonatypeRepo("snapshots"))
 
 // ··· Project Dependencies ···
-val sangriaV        = "1.4.+"
-val sangriaCirceV   = "1.2.1"
-val akkaHttpV       = "10.1.+"
-val akkaHttpCircleV = "1.22.+"
-val circeV          = "0.10.+"
+val sangriaV        = "2.0.0-M1"
+val sangriaCirceV   = "1.3.0"
+val akkaHttpV       = "10.1.10"
+val akkaHttpCircleV = "1.28.+"
+val circeV          = "0.12.1"
 val slf4JV          = "1.7.25"
 val logbackV        = "1.2.3"
-val scalatestV      = "3.0.5"
+val scalatestV      = "3.0.8"
 
 libraryDependencies ++= Seq(
   // --- GraphQL --
@@ -64,6 +64,7 @@ libraryDependencies ++= Seq(
   "org.slf4j"           %  "slf4j-api"        % slf4JV,
   "ch.qos.logback"      %  "logback-classic"  % logbackV        % Test,
   // --- Testing ---
+  "com.typesafe.akka"   %% "akka-testkit"       % "2.5.25"      % Test,
   "com.typesafe.akka"   %% "akka-http-testkit"  % akkaHttpV     % Test,
   "org.scalatest"       %% "scalatest"          % scalatestV    % Test
 )

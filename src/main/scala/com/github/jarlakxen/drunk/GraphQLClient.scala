@@ -27,7 +27,7 @@ import backend.{AkkaBackend, AkkaConnectionBackend, AkkaHttpBackend}
 import extensions.{GraphQLExtensions, NoExtensions}
 import io.circe._
 import io.circe.parser._
-import sangria._
+import sangria.{ ast => _, _ }
 import sangria.ast.Document
 import sangria.introspection._
 import sangria.marshalling.circe._
