@@ -23,7 +23,6 @@ package object drunk {
 
     implicit val system: ActorSystem = ActorSystem("drunk-test")
     implicit def executor = system.dispatcher
-    implicit val materializer = ActorMaterializer()
 
     private def temporaryServerAddress(interface: String = "127.0.0.1"): InetSocketAddress = {
       val serverSocket = ServerSocketChannel.open()

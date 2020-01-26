@@ -13,7 +13,6 @@ import scala.concurrent.{ExecutionContext, Future}
 
 trait AkkaBackend {
   implicit val as: ActorSystem
-  implicit val mat: ActorMaterializer
 
   def send(body: String): Future[(Int, String)]
 
