@@ -3,7 +3,6 @@ package com.github.jarlakxen.drunk.backend
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http.OutgoingConnection
 import akka.http.scaladsl.model._
-import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{Flow, Sink, Source}
 
 import scala.collection.immutable
@@ -13,7 +12,7 @@ class AkkaConnectionBackend  private[AkkaConnectionBackend] (
   uri: Uri,
   flow: Flow[HttpRequest, HttpResponse, Future[OutgoingConnection]],
   headers: immutable.Seq[HttpHeader]
-)(override implicit val as: ActorSystem, override implicit val mat: ActorMaterializer)
+)(override implicit val as: ActorSystem)
    extends AkkaBackend {
 
   def send(body: String): Future[(Int, String)] = {
@@ -56,7 +55,7 @@ object AkkaConnectionBackend {
   def apply(uri: Uri,
              flow: Flow[HttpRequest, HttpResponse, Future[OutgoingConnection]],
              headers: immutable.Seq[HttpHeader] = Nil
-           )( implicit  as: ActorSystem,  mat: ActorMaterializer): AkkaConnectionBackend =
+           )(implicit  as: ActorSystem): AkkaConnectionBackend =
     new AkkaConnectionBackend(uri, flow, headers)
 
 }

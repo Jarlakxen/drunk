@@ -21,13 +21,12 @@ import scala.concurrent.{ExecutionContext, Future}
 import akka.actor.ActorSystem
 import akka.http.scaladsl.{Http, HttpExt}
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpHeader, HttpMethods, HttpRequest, Uri}
-import akka.stream.ActorMaterializer
 
 class AkkaHttpBackend private[AkkaHttpBackend] (
   uri: Uri,
   headers: immutable.Seq[HttpHeader],
   httpExt: HttpExt
-)(override implicit val as: ActorSystem, override implicit val mat: ActorMaterializer)
+)(override implicit val as: ActorSystem)
     extends AkkaBackend {
 
   def send(body: String): Future[(Int, String)] = {
@@ -67,7 +66,7 @@ object AkkaHttpBackend {
     uri: Uri,
     headers: immutable.Seq[HttpHeader] = Nil,
     httpExt: Option[HttpExt] = None
-  )(implicit as: ActorSystem, mat: ActorMaterializer): AkkaHttpBackend = {
+  )(implicit as: ActorSystem): AkkaHttpBackend = {
 
     val http = httpExt.getOrElse { Http(as) }
     new AkkaHttpBackend(uri, headers, http)
