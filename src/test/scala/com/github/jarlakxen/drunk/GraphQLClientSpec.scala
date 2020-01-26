@@ -34,7 +34,7 @@ case class Droid(
 case class HeroQuery(hero: Character)
 
 class GraphQLClientSpec extends Spec with TestHttpServer {
-  implicit val episodeDecoder = Decoder.enumDecoder(Episode)
+  implicit val episodeDecoder = Decoder.decodeEnumeration(Episode)
   implicit val humanDecoder: Decoder[Human] = deriveDecoder
   implicit val droidDecoder: Decoder[Droid] = deriveDecoder
 
