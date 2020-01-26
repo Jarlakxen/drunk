@@ -41,12 +41,12 @@ scalacOptions ++= Seq(
 resolvers ++= Seq(Resolver.sonatypeRepo("releases"), Resolver.sonatypeRepo("snapshots"))
 
 // ··· Project Dependencies ···
-val sangriaV        = "2.0.0-M1"
+val sangriaV        = "2.0.0-M3"
 val sangriaCirceV   = "1.3.0"
-val akkaHttpV       = "10.1.10"
-val akkaHttpCircleV = "1.28.+"
-val circeV          = "0.12.1"
-val slf4JV          = "1.7.25"
+val akkaHttpV       = "10.1.11"
+val akkaHttpCircleV = "1.30.+"
+val circeV          = "0.12.3"
+val slf4JV          = "1.7.30"
 val logbackV        = "1.2.3"
 val scalatestV      = "3.0.8"
 
@@ -64,7 +64,7 @@ libraryDependencies ++= Seq(
   "org.slf4j"           %  "slf4j-api"        % slf4JV,
   "ch.qos.logback"      %  "logback-classic"  % logbackV        % Test,
   // --- Testing ---
-  "com.typesafe.akka"   %% "akka-testkit"       % "2.5.25"      % Test,
+  "com.typesafe.akka"   %% "akka-testkit"       % "2.6.1"      % Test,
   "com.typesafe.akka"   %% "akka-http-testkit"  % akkaHttpV     % Test,
   "org.scalatest"       %% "scalatest"          % scalatestV    % Test
 )
