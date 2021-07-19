@@ -10,13 +10,15 @@ name := projectName
 
 organization := "com.github.jarlakxen"
 
-crossScalaVersions := Seq("2.12.5")
+crossScalaVersions := Seq("2.12.7", "2.11.12")
 
 scalaVersion := crossScalaVersions.value.head
 
 organizationName := "Facundo Viale"
 startYear := Some(2018)
 licenses += ("Apache-2.0", new URL("https://www.apache.org/licenses/LICENSE-2.0.txt"))
+
+publishMavenStyle := true
 
 // ··· Project Options ···
 
@@ -39,11 +41,11 @@ scalacOptions ++= Seq(
 resolvers ++= Seq(Resolver.sonatypeRepo("releases"), Resolver.sonatypeRepo("snapshots"))
 
 // ··· Project Dependencies ···
-val sangriaV        = "1.4.0"
+val sangriaV        = "1.4.+"
 val sangriaCirceV   = "1.2.1"
-val akkaHttpV       = "10.1.1"
-val akkaHttpCircleV = "1.20.0"
-val circeV          = "0.9.3"
+val akkaHttpV       = "10.1.+"
+val akkaHttpCircleV = "1.22.+"
+val circeV          = "0.10.+"
 val slf4JV          = "1.7.25"
 val logbackV        = "1.2.3"
 val scalatestV      = "3.0.5"

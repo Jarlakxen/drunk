@@ -1,10 +1,23 @@
 # Changelog
 
+## 13/10/2018 - Version 2.5.0
+
+Release changes:
+
+* Bump dependencies
+* Cross build
+
+## 17/04/2018 - Version 2.4.0
+
+Release changes:
+
+* #3 Fix Implications of the streaming nature of Request/Response Entities. Thanks to @NicolasRouquette!
+
 ## 02/04/2018 - Version 2.3.0
 
 Release changes:
 
-* Bump dependancies
+* Bump dependencies
 * #1 Add support for Http connection headers. Thanks to @NicolasRouquette!
 
 ## 22/01/2018 - Version 2.2.0

@@ -16,33 +16,39 @@
 
 package com.github.jarlakxen.drunk
 
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util._
-
 import akka.actor.ActorSystem
-import akka.http.scaladsl.model.Uri
-
-import backend.AkkaHttpBackend
-import extensions.{ GraphQLExtensions, NoExtensions }
-import io.circe._, io.circe.parser._
+import akka.http.scaladsl.Http.OutgoingConnection
+import akka.http.scaladsl.model.{HttpHeader, HttpRequest, HttpResponse, Uri}
+import akka.stream.ActorMaterializer
+import akka.stream.scaladsl.Flow
+import backend.{AkkaBackend, AkkaConnectionBackend, AkkaHttpBackend}
+import extensions.{GraphQLExtensions, NoExtensions}
+import io.circe._
+import io.circe.parser._
 import sangria._
 import sangria.ast.Document
 import sangria.introspection._
 import sangria.marshalling.circe._
-import sangria.parser.{ SyntaxError, QueryParser }
+import sangria.parser.{QueryParser, SyntaxError}
 
-class GraphQLClient private[GraphQLClient] (uri: Uri, options: ClientOptions, backend: AkkaHttpBackend) {
+import scala.collection.immutable
+
+class GraphQLClient private[GraphQLClient] (options: ClientOptions, backend: AkkaBackend) {
   import GraphQLClient._
 
   private[drunk] def execute[Res, Vars](doc: Document, variables: Option[Vars], name: Option[String])(
     implicit
     variablesEncoder: Encoder[Vars],
-    ec: ExecutionContext): Future[(Int, Json)] =
+    ec: ExecutionContext
+  ): Future[(Int, Json)] =
     execute(GraphQLOperation(doc, variables, name))
 
   private[drunk] def execute[Res, Vars](op: GraphQLOperation[Res, Vars])(
     implicit
-    ec: ExecutionContext): Future[(Int, Json)] = {
+    ec: ExecutionContext
+  ): Future[(Int, Json)] = {
 
     val fields =
       List("query" -> op.docToJson) ++
@@ -52,7 +58,7 @@ class GraphQLClient private[GraphQLClient] (uri: Uri, options: ClientOptions, ba
     val body = Json.obj(fields: _*).noSpaces
 
     for {
-      (statusCode, rawBody) <- backend.send(uri, body)
+      (statusCode, rawBody) <- backend.send(body)
       jsonBody <- Future.fromTry(parse(rawBody).toTry)
     } yield (statusCode, jsonBody)
   }
@@ -62,21 +68,24 @@ class GraphQLClient private[GraphQLClient] (uri: Uri, options: ClientOptions, ba
 
   def query[Res](
     doc: String,
-    operationName: String)(implicit dec: Decoder[Res], ec: ExecutionContext): Try[GraphQLCursor[Res, Nothing]] =
+    operationName: String
+  )(implicit dec: Decoder[Res], ec: ExecutionContext): Try[GraphQLCursor[Res, Nothing]] =
     query(doc, None, Some(operationName))(dec, null, ec)
 
   def query[Res, Vars](doc: String, variables: Vars)(
     implicit
     dec: Decoder[Res],
     en: Encoder[Vars],
-    ec: ExecutionContext): Try[GraphQLCursor[Res, Vars]] =
+    ec: ExecutionContext
+  ): Try[GraphQLCursor[Res, Vars]] =
     query(doc, Some(variables), None)
 
   def query[Res, Vars](doc: String, variables: Option[Vars], operationName: Option[String])(
     implicit
     dec: Decoder[Res],
     en: Encoder[Vars],
-    ec: ExecutionContext): Try[GraphQLCursor[Res, Vars]] =
+    ec: ExecutionContext
+  ): Try[GraphQLCursor[Res, Vars]] =
     QueryParser.parse(doc).map(query(_, variables, operationName))
 
   def query[Res](doc: Document)(implicit dec: Decoder[Res], ec: ExecutionContext): GraphQLCursor[Res, Nothing] =
@@ -84,21 +93,24 @@ class GraphQLClient private[GraphQLClient] (uri: Uri, options: ClientOptions, ba
 
   def query[Res](
     doc: Document,
-    operationName: String)(implicit dec: Decoder[Res], ec: ExecutionContext): GraphQLCursor[Res, Nothing] =
+    operationName: String
+  )(implicit dec: Decoder[Res], ec: ExecutionContext): GraphQLCursor[Res, Nothing] =
     query(doc, None, Some(operationName))(dec, null, ec)
 
   def query[Res, Vars](doc: Document, variables: Vars)(
     implicit
     dec: Decoder[Res],
     en: Encoder[Vars],
-    ec: ExecutionContext): GraphQLCursor[Res, Vars] =
+    ec: ExecutionContext
+  ): GraphQLCursor[Res, Vars] =
     query(doc, Some(variables), None)
 
   def query[Res, Vars](doc: Document, variables: Option[Vars], operationName: Option[String])(
     implicit
     dec: Decoder[Res],
     en: Encoder[Vars],
-    ec: ExecutionContext): GraphQLCursor[Res, Vars] = {
+    ec: ExecutionContext
+  ): GraphQLCursor[Res, Vars] = {
     var fullDoc = doc
     if (options.addTypename) {
       fullDoc = ast.addTypename(doc)
@@ -106,7 +118,9 @@ class GraphQLClient private[GraphQLClient] (uri: Uri, options: ClientOptions, ba
 
     val operation: GraphQLOperation[Res, Vars] = GraphQLOperation(doc, variables, operationName)
     val result = execute(operation)
-    val data: Future[GraphQLClient.GraphQLResponse[Res]] = result.flatMap { case (status, body) => Future.fromTry(extractErrorOrData(body, status)) }
+    val data: Future[GraphQLClient.GraphQLResponse[Res]] = result.flatMap {
+      case (status, body) => Future.fromTry(extractErrorOrData(body, status))
+    }
     val extensions = result.map { case (_, body) => extractExtensions(body) }
     new GraphQLCursor(this, data, extensions, operation)
   }
@@ -115,14 +129,16 @@ class GraphQLClient private[GraphQLClient] (uri: Uri, options: ClientOptions, ba
     implicit
     dec: Decoder[Res],
     en: Encoder[Vars],
-    ec: ExecutionContext): Future[GraphQLResponse[Res]] =
+    ec: ExecutionContext
+  ): Future[GraphQLResponse[Res]] =
     mutate(doc, Some(variables), None)
 
   def mutate[Res, Vars](doc: Document, variables: Vars, operationName: Option[String])(
     implicit
     dec: Decoder[Res],
     en: Encoder[Vars],
-    ec: ExecutionContext): Future[GraphQLResponse[Res]] = {
+    ec: ExecutionContext
+  ): Future[GraphQLResponse[Res]] = {
 
     val result = execute(doc, Some(variables), operationName)
     result.flatMap { case (status, body) => Future.fromTry(extractErrorOrData(body, status)) }
@@ -138,16 +154,44 @@ class GraphQLClient private[GraphQLClient] (uri: Uri, options: ClientOptions, ba
 
 object GraphQLClient {
 
+  // Work arround for Scala 2.11
+  implicit class Either212[+A, +B](either: Either[A, B]) {
+
+    def toTry(implicit ev: A <:< Throwable): Try[B] = either match {
+      case Right(b) => Success(b)
+      case Left(a) => Failure(a)
+    }
+
+    def toOption: Option[B] = either match {
+      case Right(b) => Some(b)
+      case _        => None
+    }
+  }
+
   type GraphQLResponse[Res] = Either[GraphQLResponseError, GraphQLResponseData[Res]]
 
-  def apply(uri: String, backend: AkkaHttpBackend, clientOptions: ClientOptions): GraphQLClient =
-    new GraphQLClient(Uri(uri), clientOptions, backend)
+  def apply(backend: AkkaBackend, clientOptions: ClientOptions): GraphQLClient =
+    new GraphQLClient(clientOptions, backend)
 
-  def apply(uri: String, options: ConnectionOptions = ConnectionOptions.Default, clientOptions: ClientOptions = ClientOptions.Default): GraphQLClient =
-    new GraphQLClient(Uri(uri), clientOptions, AkkaHttpBackend(options))
+  def apply(
+    uri: String,
+    options: ConnectionOptions = ConnectionOptions.Default,
+    clientOptions: ClientOptions = ClientOptions.Default,
+    headers: immutable.Seq[HttpHeader] = Nil
+  ): GraphQLClient = {
+    implicit val as: ActorSystem = ActorSystem("GraphQLClient")
+    implicit val mat: ActorMaterializer = ActorMaterializer()
+    val backend = AkkaHttpBackend(Uri(uri), headers)
+    new GraphQLClient(clientOptions, backend)
+  }
 
-  def apply(actorSystem: ActorSystem, uri: String, connectionOptions: ConnectionOptions, clientOptions: ClientOptions): GraphQLClient =
-    new GraphQLClient(Uri(uri), clientOptions, AkkaHttpBackend.usingActorSystem(actorSystem, connectionOptions))
+  def apply(
+    uri: Uri,
+    flow: Flow[HttpRequest, HttpResponse, Future[OutgoingConnection]],
+    clientOptions: ClientOptions,
+    headers: immutable.Seq[HttpHeader]
+  )(implicit as: ActorSystem, mat: ActorMaterializer): GraphQLClient =
+    new GraphQLClient(clientOptions, AkkaConnectionBackend(uri, flow, headers))
 
   private[GraphQLClient] def extractErrors(body: Json, statusCode: Int): Option[GraphQLResponseError] = {
     val cursor: HCursor = body.hcursor
@@ -156,7 +200,7 @@ object GraphQLClient {
       errorsNode <- cursor.downField("errors").focus
       errors <- errorsNode.asArray
     } yield {
-      val msgs = errors.map(_.hcursor.downField("message").as[String].toOption).flatten.toList
+      val msgs = errors.flatMap(_.hcursor.downField("message").as[String].toOption).toList
       GraphQLResponseError(msgs, statusCode)
     }
   }
