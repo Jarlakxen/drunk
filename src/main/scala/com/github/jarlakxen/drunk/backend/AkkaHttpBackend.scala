@@ -31,14 +31,10 @@ import akka.http.scaladsl.model.headers.HttpEncodings
 import akka.http.scaladsl.settings.ClientConnectionSettings
 import akka.http.scaladsl.settings.ConnectionPoolSettings
 import akka.stream.ActorMaterializer
+import akka.stream.scaladsl.Source
 import akka.util.ByteString
+
 import com.github.jarlakxen.drunk._
-
-import scala.concurrent.{ExecutionContext, Future}
-
-trait GraphQLBackend {
-  def send(uri: Uri, body: String, options: ClientOptions): Future[(Int, String)]
-}
 
 class AkkaHttpBackend private[AkkaHttpBackend] (
   actorSystem: ActorSystem,
@@ -88,7 +84,7 @@ class AkkaHttpBackend private[AkkaHttpBackend] (
       if (code >= 200 && code < 300) {
         stringBody.map((code, _))
       } else {
-        stringBody.flatMap { body => Future.failed(new RuntimeException(s"${uri.toString} returned $code with body: $body")) }
+        stringBody.flatMap { body => Future.failed(new RuntimeException(s"${uri.toString} return $code with body: $body")) }
       }
     }
   }
