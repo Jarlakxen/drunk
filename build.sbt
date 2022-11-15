@@ -4,21 +4,23 @@
 
 // ··· Project Info ···
 
-val projectName = "drunk"
+name := "drunk"
 
-name := projectName
+organization := "rice456"
 
-organization := "com.github.jarlakxen"
+description := "A simple GraphQL client on top of Sangria, Akka HTTP and Circe"
 
-crossScalaVersions := Seq("2.12.7", "2.11.12")
+scalaVersion := "2.12.15"
 
-scalaVersion := crossScalaVersions.value.head
-
-organizationName := "Facundo Viale"
-startYear := Some(2018)
-licenses += ("Apache-2.0", new URL("https://www.apache.org/licenses/LICENSE-2.0.txt"))
+version := "2.5.0"
 
 publishMavenStyle := true
+
+githubOwner := "rice456"
+githubRepository := "drunk"
+githubTokenSource := TokenSource.Environment("GITHUB_TOKEN")
+
+updateOptions := updateOptions.value.withGigahorse(false) // fix (publish) okhttp3.internal.http2.StreamResetException
 
 // ··· Project Options ···
 

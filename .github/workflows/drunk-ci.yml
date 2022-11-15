@@ -1,0 +1,24 @@
+name: Drunk CI
+
+on:
+  push:
+    branches:
+      - 'publish-github-registry-2' # only run on this branch
+    tags:
+      - "**" # matches every tags
+jobs:
+  publish:
+    name: Publish
+    timeout-minutes: 5
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '8'
+          cache: 'sbt'
+      - name: publish
+        run: sbt publish
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
