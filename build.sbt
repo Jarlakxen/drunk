@@ -20,6 +20,8 @@ githubOwner := "rice456"
 githubRepository := "drunk"
 githubTokenSource := TokenSource.Environment("GITHUB_TOKEN")
 
+updateOptions := updateOptions.value.withGigahorse(false) // fix (publish) okhttp3.internal.http2.StreamResetException
+
 // ··· Project Options ···
 
 lazy val root = (project in file("."))
